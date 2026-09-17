@@ -40,12 +40,35 @@ function compact(start){
  let mi=Math.floor(sec/60);if(mi)return mi+" "+(mi==1?"Minute":"Minuten");
  return sec+" "+(sec==1?"Sekunde":"Sekunden");
 }
+function calendarElapsed(start){
+ let s=new Date(start), n=new Date();
+ if(n<s)return "0 Tage";
+ let y=n.getFullYear()-s.getFullYear();
+ let m=n.getMonth()-s.getMonth();
+ if(m<0){y--;m+=12}
+ let anchor=new Date(s);
+ anchor.setFullYear(s.getFullYear()+y);
+ anchor.setMonth(s.getMonth()+m);
+ if(anchor>n){
+   m--;
+   if(m<0){y--;m=11}
+   anchor=new Date(s);
+   anchor.setFullYear(s.getFullYear()+y);
+   anchor.setMonth(s.getMonth()+m);
+ }
+ let days=Math.floor((n-anchor)/86400000);
+ let parts=[];
+ if(y)parts.push(y+" "+(y==1?"Jahr":"Jahre"));
+ if(m)parts.push(m+" "+(m==1?"Monat":"Monate"));
+ if(days||!parts.length)parts.push(days+" "+(days==1?"Tag":"Tage"));
+ return parts.join(" ");
+}
 function detail(start){
  let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));
  let d=Math.floor(sec/86400), w=Math.floor(d/7), days=d%7, rem=sec%86400;
  let h=Math.floor(rem/3600), mi=Math.floor((rem%3600)/60), s=rem%60;
  let dt=new Date(start).toLocaleString("de-DE",{dateStyle:"long",timeStyle:"short"});
- let cal=compact(start);
+ let cal=calendarElapsed(start);
  return {sec,d,w,days,h,mi,s,dt,cal};
 }
 function render(){
