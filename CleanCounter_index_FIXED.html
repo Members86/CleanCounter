@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Clean Counter">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Clean Counter</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#f2f2f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:rgba(242,242,247,.92);backdrop-filter:blur(12px);padding:14px 16px 10px;border-bottom:1px solid #ddd}
+.head{display:flex;align-items:center;justify-content:space-between}.title{font-size:20px;font-weight:800;letter-spacing:.5px}.plus{border:0;background:none;font-size:32px;line-height:1;padding:0 4px;color:#007aff}
+main{padding:16px;max-width:650px;margin:auto}.empty{text-align:center;padding:90px 24px;color:#777}.empty .timer{font-size:52px}.empty h2{color:#111}
+.listTitle{font-size:21px;font-weight:750;margin:0 0 12px 2px}.card{display:flex;align-items:center;background:white;border-radius:12px;margin:10px 0;overflow:hidden;border:1px solid #ddd;box-shadow:0 2px 7px #0000000d;cursor:pointer}.bar{width:7px;align-self:stretch}.cardbody{padding:11px 12px;display:flex;align-items:center;width:100%;gap:12px}.name{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.duration{font-size:20px;font-weight:800;margin-top:2px}.chev{margin-left:auto;color:#888}
+.modal{position:fixed;inset:0;background:#f2f2f7;z-index:20;overflow:auto}.modalhead{position:sticky;top:0;background:rgba(242,242,247,.94);backdrop-filter:blur(12px);padding:12px 16px;border-bottom:1px solid #ddd;display:flex;align-items:center;justify-content:space-between}.modalhead button{border:0;background:none;font-size:16px;color:#007aff}.modalhead .save{font-weight:700}.content{padding:18px 16px;max-width:650px;margin:auto}.section{background:white;border-radius:14px;margin:14px 0;overflow:hidden}.row{padding:14px 15px;border-bottom:1px solid #eee}.row:last-child{border-bottom:0}.label{display:block;font-size:13px;color:#777;margin-bottom:6px}.input{width:100%;border:0;font-size:17px;outline:0;background:transparent}.colorrow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:14px 15px}.swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent}.swatch.selected{border-color:#111;outline:2px solid white}.colorinput{width:45px;height:32px;border:0;background:none;padding:0}.detailTop{text-align:center}.dot{width:18px;height:18px;border-radius:50%;margin:5px auto 10px}.detailTop h1{font-size:30px;margin:0 0 6px}.sub{color:#777}.bigbox{text-align:center;padding:22px;margin:20px 0;border-radius:20px}.bigweeks{font-size:34px;font-weight:800}.clock{font-size:29px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:7px}.small{font-weight:700;color:#777;margin-top:8px}.total,.note{background:white;border-radius:14px;padding:15px;margin:14px 0}.total h3,.note h3{margin:0 0 9px}.danger{color:#ff3b30;font-size:17px;background:white;border:0;width:100%;padding:15px;text-align:left}
+</style>
+</head>
+<body>
+<header><div class="head"><div class="title">CLEAN COUNTER</div><button class="plus" id="addBtn">+</button></div></header>
+<main id="app"></main>
+<script>
+const KEY="cleanCounterEventsV1";
+let events=JSON.parse(localStorage.getItem(KEY)||"[]");
+const colors=["#FF3B30","#FF9500","#FFD60A","#34C759","#007AFF","#AF52DE","#8E8E93"];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function save(){localStorage.setItem(KEY,JSON.stringify(events))}
+function compact(start){
+ let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));
+ const d=Math.floor(sec/86400), y=Math.floor(d/365.2425);
+ if(y>=1)return y+" "+(y==1?"Jahr":"Jahre");
+ if(d>=7){let w=Math.floor(d/7), days=d%7;
+   if(days)return w+" "+(w==1?"Woche":"Wochen")+" "+days+" "+(days==1?"Tag":"Tage");
+   return w+" "+(w==1?"Woche":"Wochen");
+ }
+ if(d>=1)return d+" "+(d==1?"Tag":"Tage");
+ let h=Math.floor(sec/3600);if(h)return h+" "+(h==1?"Stunde":"Stunden");
+ let mi=Math.floor(sec/60);if(mi)return mi+" "+(mi==1?"Minute":"Minuten");
+ return sec+" "+(sec==1?"Sekunde":"Sekunden");
+}
+function detail(start){
+ let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));
+ let d=Math.floor(sec/86400), w=Math.floor(d/7), days=d%7, rem=sec%86400;
+ let h=Math.floor(rem/3600), mi=Math.floor((rem%3600)/60), s=rem%60;
+ let dt=new Date(start).toLocaleString("de-DE",{dateStyle:"long",timeStyle:"short"});
+ let cal=compact(start);
+ return {sec,d,w,days,h,mi,s,dt,cal};
+}
+function render(){
+ events.sort((a,b)=>new Date(a.start)-new Date(b.start));
+ if(!events.length){$("app").innerHTML='<div class="empty"><div class="timer">⏱</div><h2>CLEAN COUNTER</h2><p>Deine Zeit. Deine Ereignisse.</p><p>Tippe oben rechts auf +, um deinen ersten Zähler anzulegen.</p></div>';return}
+ $("app").innerHTML='<div class="listTitle">Deine Ereignisse</div>'+events.map(e=>`<div class="card" data-id="${e.id}"><div class="bar" style="background:${e.color}"></div><div class="cardbody"><div><div class="name">${esc(e.name)||"Ohne Namen"}</div><div class="duration" style="color:${e.color}">${compact(e.start)}</div></div><div class="chev">›</div></div></div>`).join("");
+ document.querySelectorAll(".card").forEach(c=>c.onclick=()=>detailView(c.dataset.id));
+}
+function openModal(content){let m=document.createElement("div");m.className="modal";m.innerHTML=content;document.body.appendChild(m);return m}
+function dateValue(d){let x=new Date(d);x.setMinutes(x.getMinutes()-x.getTimezoneOffset());return x.toISOString().slice(0,16)}
+function addView(){
+ let m=openModal(`<div class="modalhead"><button id="cancel">Abbrechen</button><b>Ereignis erstellen</b><button class="save" id="create">Erstellen</button></div><div class="content"><div class="section"><div class="row"><label class="label">Name des Ereignisses</label><input class="input" id="name" placeholder="Name"></div><div class="row"><label class="label">Bemerkung (optional)</label><input class="input" id="note" placeholder="Bemerkung"></div></div><div class="section"><div class="row"><label class="label">Datum & Uhrzeit</label><input class="input" id="start" type="datetime-local" value="${dateValue(new Date())}"></div></div>${colorPicker("#FFD60A")}</div>`);
+ $("cancel").onclick=()=>m.remove(); $("create").onclick=()=>{let name=$("name").value.trim();if(!name){$("name").focus();return}events.push({id:crypto.randomUUID(),name,note:$("note").value,start:new Date($("start").value).toISOString(),color:getColor(m)});save();m.remove();render()};
+}
+function colorPicker(selected){
+ return `<div class="section"><div class="colorrow"><b>Schnellwahl</b>${colors.map(c=>`<button class="swatch ${c==selected?"selected":""}" data-color="${c}" style="background:${c}"></button>`).join("")}<input class="colorinput" id="customColor" type="color" value="${selected}"></div></div>`
+}
+function getColor(m){return m.querySelector(".swatch.selected")?.dataset.color || m.querySelector("#customColor").value}
+document.addEventListener("click",e=>{let b=e.target.closest(".swatch");if(b){b.closest(".section").querySelectorAll(".swatch").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");b.closest(".section").querySelector("#customColor").value=b.dataset.color}});
+function detailView(id){
+ let e=events.find(x=>x.id===id);if(!e)return;
+ function paint(){let d=detail(e.start);m.querySelector(".live").innerHTML=`<div class="bigweeks" style="color:${e.color}">${d.w} Wochen ${d.days} Tage</div><div class="clock">${String(d.h).padStart(2,"0")}:${String(d.mi).padStart(2,"0")}:${String(d.s).padStart(2,"0")}</div><div class="small">${d.cal}</div>`;m.querySelector(".total").innerHTML=`<h3>Gesamtdauer</h3><div>${d.d} Tage</div><div>${Math.floor(d.sec/3600)} Stunden</div><div>${Math.floor(d.sec/60)} Minuten</div><div>${d.sec} Sekunden</div>`}
+ let m=openModal(`<div class="modalhead"><button id="close">Schließen</button><b>Details</b><button class="save" id="edit">Bearbeiten</button></div><div class="content"><div class="detailTop"><div class="dot" style="background:${e.color}"></div><h1>${esc(e.name)||"Ohne Namen"}</h1><div class="sub">${new Date(e.start).toLocaleString("de-DE",{dateStyle:"long",timeStyle:"short"})}</div></div><div class="bigbox live" style="background:${e.color}18"></div><div class="total"></div>${e.note?`<div class="note"><h3>Bemerkung</h3><div class="sub">${esc(e.note)}</div></div>`:""}</div>`);
+ paint();let timer=setInterval(paint,1000);m.querySelector("#close").onclick=()=>{clearInterval(timer);m.remove()};m.querySelector("#edit").onclick=()=>{clearInterval(timer);m.remove();editView(id)};
+}
+function editView(id){
+ let e=events.find(x=>x.id===id);if(!e)return;
+ let m=openModal(`<div class="modalhead"><button id="cancel">Abbrechen</button><b>Ereignis bearbeiten</b><button class="save" id="save">Speichern</button></div><div class="content"><div class="section"><div class="row"><label class="label">Name des Ereignisses</label><input class="input" id="name" value="${esc(e.name)}"></div><div class="row"><label class="label">Bemerkung (optional)</label><input class="input" id="note" value="${esc(e.note)}"></div></div><div class="section"><div class="row"><label class="label">Datum & Uhrzeit</label><input class="input" id="start" type="datetime-local" value="${dateValue(e.start)}"></div></div>${colorPicker(e.color)}<div class="section"><button class="danger" id="delete">Ereignis löschen</button></div></div>`);
+ m.querySelector("#cancel").onclick=()=>m.remove();m.querySelector("#save").onclick=()=>{let n=m.querySelector("#name").value.trim();if(!n)return;Object.assign(e,{name:n,note:m.querySelector("#note").value,start:new Date(m.querySelector("#start").value).toISOString(),color:getColor(m)});save();m.remove();render()};m.querySelector("#delete").onclick=()=>{if(confirm("Ereignis wirklich löschen?")){events=events.filter(x=>x.id!==id);save();m.remove();render()}}
+}
+$("addBtn").onclick=addView;render();setInterval(render,1000);
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
