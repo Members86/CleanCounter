@@ -30,16 +30,62 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function save(){localStorage.setItem(KEY,JSON.stringify(events))}
 function compact(start){
- let sec=Math.max(0,Math.floor((Date.now()-new Date(start).getTime())/1000));
- const d=Math.floor(sec/86400), y=Math.floor(d/365.2425);
- if(y>=1)return y+" "+(y==1?"Jahr":"Jahre");
- if(d>=7){let w=Math.floor(d/7), days=d%7;
-   if(days)return w+" "+(w==1?"Woche":"Wochen")+" "+days+" "+(days==1?"Tag":"Tage");
-   return w+" "+(w==1?"Woche":"Wochen");
+ let a=new Date(start), b=new Date();
+
+ let years=b.getFullYear()-a.getFullYear();
+ let test=new Date(a);
+ test.setFullYear(a.getFullYear()+years);
+
+ if(test>b){
+  years--;
+  test=new Date(a);
+  test.setFullYear(a.getFullYear()+years);
  }
- if(d>=1)return d+" "+(d==1?"Tag":"Tage");
- let h=Math.floor(sec/3600);if(h)return h+" "+(h==1?"Stunde":"Stunden");
- let mi=Math.floor(sec/60);if(mi)return mi+" "+(mi==1?"Minute":"Minuten");
+
+ let months=b.getMonth()-test.getMonth();
+ if(months<0)months+=12;
+
+ let testMonth=new Date(test);
+ testMonth.setMonth(test.getMonth()+months);
+
+ if(testMonth>b){
+  months--;
+  testMonth=new Date(test);
+  testMonth.setMonth(test.getMonth()+months);
+ }
+
+ let days=Math.floor((b-testMonth)/86400000);
+
+ if(years>0){
+  let text=years+" "+(years==1?"Jahr":"Jahre");
+  if(months>0)text+=" "+months+" "+(months==1?"Monat":"Monate");
+  if(days>0)text+=" "+days+" "+(days==1?"Tag":"Tage");
+  return text;
+ }
+
+ if(months>0){
+  let text=months+" "+(months==1?"Monat":"Monate");
+  if(days>0)text+=" "+days+" "+(days==1?"Tag":"Tage");
+  return text;
+ }
+
+ let sec=Math.max(0,Math.floor((b-a)/1000));
+ let d=Math.floor(sec/86400);
+
+ if(d>=7){
+  let w=Math.floor(d/7), rest=d%7;
+  if(rest)return w+" "+(w==1?"Woche":"Wochen")+" "+rest+" "+(rest==1?"Tag":"Tage");
+  return w+" "+(w==1?"Woche":"Wochen");
+ }
+
+ if(d>0)return d+" "+(d==1?"Tag":"Tage");
+
+ let h=Math.floor(sec/3600);
+ if(h)return h+" "+(h==1?"Stunde":"Stunden");
+
+ let mi=Math.floor(sec/60);
+ if(mi)return mi+" "+(mi==1?"Minute":"Minuten");
+
  return sec+" "+(sec==1?"Sekunde":"Sekunden");
 }
 function detail(start){
